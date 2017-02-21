@@ -16,9 +16,13 @@
 void usage(void);
 double* openfile(int);
 double* offset(double, double*);
-void newFile(char*, double*);
+void newFile(char*, double*, double);
+void copyFile(char*, double*);
+double* scale(double sca, double* nums);
+double average(double*);
+double act_max(double*);
 int length=0;
-int max=0;
+int max;
 
 
 int main(int argc, char *argv[]) {
@@ -26,12 +30,13 @@ int main(int argc, char *argv[]) {
 	double* inpNum=0;
 	int y=1;
 	int flag=0;
+	int num=0;
 
 
 	while(y < argc){
 		if((argv[y][0] == '-') && (argv[y][1] == 'n')){
 			printf("\n-n was found\n");
-			int num=0;
+			num = 0;
 			num = atoi(argv[y+1]);
 
 			if(num<1 || num>11){
@@ -60,6 +65,7 @@ int main(int argc, char *argv[]) {
 			printf("\n-o was found\n");
 			int num1;
 			double* new_array;
+			char* fn;
 			double off=0;
 			num1 = sscanf(argv[x+1], "%lf", &off);
 
@@ -70,24 +76,45 @@ int main(int argc, char *argv[]) {
 
 			new_array = offset(off, inpNum);
 
+			fn = calloc(19, sizeof(char)); //length of filename including null terminator
+
+			sprintf(fn, "Offset_data_%02d.txt", num);//prints to file name char*
+
+			newFile(fn, new_array, off);
+
+			free(new_array);
+			free(fn);
 			x++;
 		}
 		else if((argv[x][0] == '-') && (argv[x][1] == 's')){
 			printf("\n-s was found\n");
 			int num2;
-			float offset1=0;
-			num2 = sscanf(argv[x+1], "%f", &offset1);
+			double sca=0;
+			double* array2;
+			char* fn2;
+			num2 = sscanf(argv[x+1], "%lf", &sca);
 
 			if(num2==0){
 				printf("\nError.\n");
 				usage();
 			}
 
+			array2 = scale(sca, inpNum);
+
+			fn2 = calloc(19, sizeof(char)); //length of filename including null terminator
+
+			sprintf(fn2, "Scaled_data_%02d.txt", num);//prints to file name char*
+
+			newFile(fn2, array2, sca);
+
+			free(array2);
+			free(fn2);
 			x++;
 		}
 		else if((argv[x][0] == '-') && (argv[x][1] == 'r')){
 			printf("\n-r was found\n");
 			int len=0;
+
 			len = strlen(argv[x+1]);
 
 			if(argv[x+1][len-1] != 't'){
@@ -107,6 +134,9 @@ int main(int argc, char *argv[]) {
 				usage();
 			}
 
+			copyFile( argv[x+1], inpNum);
+
+
 			x++;
 		}
 		else if((argv[x][0] == '-') && (argv[x][1] == 'h')){
@@ -117,17 +147,62 @@ int main(int argc, char *argv[]) {
 		}
 		else if((argv[x][0] == '-') && (argv[x][1] == 'S')){
 			printf("\n-S was found\n");
+			double stats_max=0;
+			double stats_avg=0;
+			char* fn3;
 
+			stats_max = act_max(inpNum);
+			stats_avg = average(inpNum);
+
+			fn3 = calloc(25, sizeof(char));
+
+			sprintf(fn3, "Statistics_data_%02d.txt", num);
+
+			FILE* f;
+
+			f = fopen(fn3, "w+");
+
+			fprintf(f, "%.4lf %.0lf", stats_avg, stats_max);
+
+			fclose(f);
+			free(fn3);
 			x++;
 		}
 		else if((argv[x][0] == '-') && (argv[x][1] == 'C')){
 			printf("\n-C was found\n");
+			double avg=0;
+			double * new_centered;
+			char* fn4=0;
 
+			new_centered = calloc(length, sizeof(double));
+			fn4 = calloc(25, sizeof(char));
+			sprintf(fn4, "Centered_data_%02d.txt", num);
+
+			avg = average(inpNum);
+			avg *= (-1);
+			new_centered = offset(avg, inpNum);
+
+			newFile(fn4, new_centered, avg);
+
+			free(new_centered);
 			x++;
 		}
 		else if((argv[x][0] == '-') && (argv[x][1] == 'N')){
 			printf("\n-N was found\n");
+			double new_max;
+			double * new_normalized;
+			char* fn5=0;
 
+			new_normalized = calloc(length, sizeof(double));
+			fn5 = calloc(25, sizeof(char));
+			sprintf(fn5, "Normalized_data_%02d.txt", num);
+
+			new_max = ((double) 1 / (double) max);
+			new_normalized = scale(new_max, inpNum);
+
+			newFile(fn5, new_normalized, new_max);
+
+			free(new_normalized);
 			x++;
 		}
 		else{
@@ -206,8 +281,10 @@ double* openfile(int num){
 	}
 
 	fscanf(file, "%d %d", &length, &max);
+	//test
+	printf("\n%lf", (double)max);
 
-	n = calloc(length, sizeof(int));
+	n = calloc(length, sizeof(double));
 
 	for(i=0; i<length; i++){
 		fscanf(file, "%lf", &n[i]);
@@ -225,9 +302,81 @@ double* offset(double off, double* nums){
 	for(x=0;x<length;x++){
 		new[x] = (double) (nums[x] + off);
 	}
+
 	return new;
 }
 
-void newFile(char*, double*){
+void newFile(char* filename, double* numbers1, double off_sca){
+	FILE* fp=0;
+	int x=0;
 
+	fp = fopen(filename, "w+");
+
+	fprintf(fp, "%d %.4lf", length, off_sca);
+
+	for(x=0;x<length;x++){
+		fprintf(fp, "\n%.4lf", numbers1[x]);
+	}
+
+	fclose(fp);
+	return;
+}
+
+double* scale(double sca, double* nums){
+	int x=0;
+	double* new;
+	new = calloc(length, sizeof(double));
+
+	for(x=0;x<length;x++){
+		new[x] = (double) (nums[x] * sca);
+	}
+
+	return new;
+}
+
+void copyFile(char* fn, double* nums){
+	FILE* fp=0;
+	int x=0;
+
+	fp = fopen(fn, "w+");
+
+	fprintf(fp, "%d %d", length, max);
+	//test
+	printf("\n%lf", (double)max);
+
+	for(x=0;x<length;x++){
+		fprintf(fp, "\n%.0d", (int) nums[x]);
+	}
+
+	fclose(fp);
+	return;
+}
+
+double act_max(double* orig_nums){
+	int x=0;
+	double actual_max=0;
+
+	actual_max = orig_nums[0];
+
+	for(x=0;x<length;x++){
+		if(orig_nums[x]>actual_max){
+			actual_max = orig_nums[x];
+		}
+	}
+
+	return actual_max;
+}
+
+double average(double* orig_nums){
+	int i=0;
+	double sum=0;
+	double average=0;
+
+	for(i=0;i<length;i++){
+		sum += orig_nums[i];
+	}
+
+	average = (double) sum / length;
+
+	return average;
 }
