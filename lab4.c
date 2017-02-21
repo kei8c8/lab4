@@ -14,12 +14,16 @@
 #include <string.h>
 
 void usage(void);
-int* openfile(int);
+double* openfile(int);
+double* offset(double, double*);
+void newFile(char*, double*);
+int length=0;
+int max=0;
 
 
 int main(int argc, char *argv[]) {
 	int x=1;
-	int* inpNum=0;
+	double* inpNum=0;
 	int y=1;
 	int flag=0;
 
@@ -55,13 +59,16 @@ int main(int argc, char *argv[]) {
 		else if((argv[x][0] == '-') && (argv[x][1] == 'o')){
 			printf("\n-o was found\n");
 			int num1;
-			float offset=0;
-			num1 = sscanf(argv[x+1], "%f", &offset);
+			double* new_array;
+			double off=0;
+			num1 = sscanf(argv[x+1], "%lf", &off);
 
 			if(num1==0){
 				printf("\nError.\n");
 				usage();
 			}
+
+			new_array = offset(off, inpNum);
 
 			x++;
 		}
@@ -147,12 +154,10 @@ void usage(void){
 	exit(0);
 }
 
-int* openfile(int num){
+double* openfile(int num){
 
 	FILE* file=0;
-	int* n=0;
-	int length=0;
-	int max=0;
+	double* n=0;
 	int i=0;
 
 	switch(num){
@@ -205,9 +210,24 @@ int* openfile(int num){
 	n = calloc(length, sizeof(int));
 
 	for(i=0; i<length; i++){
-		fscanf(file, "%d", &n[i]);
+		fscanf(file, "%lf", &n[i]);
 	}
 
 	fclose(file);
 	return n;
+}
+
+double* offset(double off, double* nums){
+	int x=0;
+	double* new;
+	new = calloc(length, sizeof(double));
+
+	for(x=0;x<length;x++){
+		new[x] = (double) (nums[x] + off);
+	}
+	return new;
+}
+
+void newFile(char*, double*){
+
 }
